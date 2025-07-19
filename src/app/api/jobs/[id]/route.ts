@@ -6,10 +6,7 @@ import { cookies } from 'next/headers';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_here';
 
-export async function DELETE(
-  req: NextRequest,
-  context: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest) {
   try {
     const cookieStore = cookies();
     const token = cookieStore.get('token')?.value;
@@ -18,24 +15,28 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      id: string;
-      role: string;
-    };
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
 
     if (decoded.role !== 'job_poster') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const url = new URL(request.url);
+    const id = url.pathname.split('/').pop(); // Get ID from /api/jobs/[id]
+
+    if (!id) {
+      return NextResponse.json({ error: 'Invalid job ID' }, { status: 400 });
+    }
+
     await connectToDB();
 
-    const job = await Job.findOne({ _id: context.params.id, postedBy: decoded.id });
+    const job = await Job.findOne({ _id: id, postedBy: decoded.id });
 
     if (!job) {
       return NextResponse.json({ error: 'Job not found or not yours' }, { status: 404 });
     }
 
-    await Job.deleteOne({ _id: context.params.id });
+    await Job.deleteOne({ _id: id });
 
     return NextResponse.json({ message: 'Job deleted successfully' }, { status: 200 });
   } catch (err: any) {
