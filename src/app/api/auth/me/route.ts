@@ -1,22 +1,26 @@
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_here';
+const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_here";
 
 export async function GET() {
   try {
-    const cookieStore = cookies(); // ✅ Remove await
-    const token = cookieStore.get('token')?.value;
-
+    const cookieStore = cookies() as unknown as {
+      get: (name: string) => { value: string } | undefined;
+    };
+    const token = cookieStore.get("token")?.value;
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    return NextResponse.json({ user: decoded }); // ✅ `user` key is important
+    return NextResponse.json({ user: decoded });
   } catch (err) {
-    console.error('Auth error:', err);
-    return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    console.error("Auth error:", err);
+    return NextResponse.json(
+      { error: "Invalid or expired token" },
+      { status: 401 }
+    );
   }
 }
